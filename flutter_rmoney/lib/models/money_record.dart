@@ -21,6 +21,27 @@ class MoneyRecord {
   final String necessity;
   final String borrower;
 
+  MoneyRecord copyWith({
+    MoneyType? type,
+    int? amount,
+    DateTime? date,
+    String? note,
+    String? category,
+    String? necessity,
+    String? borrower,
+  }) {
+    return MoneyRecord(
+      id: id,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+      note: note ?? this.note,
+      category: category ?? this.category,
+      necessity: necessity ?? this.necessity,
+      borrower: borrower ?? this.borrower,
+    );
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'type': type.storageValue,

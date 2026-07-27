@@ -60,12 +60,38 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _update(MoneyRecord record) async {
+    final updated = records
+        .map((item) => item.id == record.id ? record : item)
+        .toList(growable: false);
+    await store.save(updated);
+    await _load();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заслаа')),
+      );
+    }
+  }
+
+  Future<void> _delete(MoneyRecord record) async {
+    final updated = records
+        .where((item) => item.id != record.id)
+        .toList(growable: false);
+    await store.save(updated);
+    await _load();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Устгалаа')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
       DashboardPage(records: records, savingsPlan: savingsPlan),
       AddRecordPage(records: records, onAdd: _add),
-      TransactionsPage(records: records),
+      TransactionsPage(records: records, onUpdate: _update, onDelete: _delete),
       LoansPage(records: records),
       SavingsPage(
           records: records, savingsPlan: savingsPlan, onSave: _saveSavingsPlan),
