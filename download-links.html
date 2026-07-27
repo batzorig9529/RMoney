@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RMoney татах</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Arial, sans-serif;
+      background: #f7f9fc;
+      color: #14213d;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    main {
+      width: min(100%, 440px);
+      background: #ffffff;
+      border: 1px solid #dbe4f0;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 16px 40px rgba(20, 33, 61, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.15;
+    }
+
+    p {
+      margin: 0 0 18px;
+      color: #526070;
+      line-height: 1.5;
+    }
+
+    .links {
+      display: grid;
+      gap: 10px;
+    }
+
+    a {
+      display: block;
+      padding: 13px 14px;
+      border-radius: 6px;
+      background: #0f766e;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    a.secondary {
+      background: #334155;
+    }
+
+    small {
+      display: block;
+      margin-top: 18px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>RMoney</h1>
+    <p id="message">Төхөөрөмжид тохирох татах холбоос руу шилжүүлж байна.</p>
+    <div class="links">
+      <a id="androidStoreLink" href="#">Android - Play Store</a>
+      <a id="androidApkLink" class="secondary" href="#">Android - APK</a>
+      <a id="iosStoreLink" href="#">iPhone - App Store</a>
+      <a id="iosTestFlightLink" class="secondary" href="#">iPhone - TestFlight</a>
+    </div>
+    <small>
+      Publish хийсний дараа энэ файлын CONFIG хэсэгт байгаа placeholder холбоосуудыг
+      өөрийн Play Store, APK hosting, App Store, TestFlight холбоосоор солино.
+    </small>
+  </main>
+
+  <script>
+    const CONFIG = {
+      androidPlayStore: 'https://play.google.com/store/apps/details?id=com.example.rmoney_flutter',
+      androidApk: 'https://example.com/downloads/rmoney.apk',
+      iosAppStore: 'https://apps.apple.com/app/idYOUR_APP_ID',
+      iosTestFlight: 'https://testflight.apple.com/join/YOUR_TESTFLIGHT_CODE',
+      preferBetaLinks: false,
+      autoRedirectDelayMs: 800,
+    };
+
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera || '';
+    const isAndroid = /android/i.test(userAgent);
+    const isIos = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
+
+    const links = {
+      androidStoreLink: CONFIG.androidPlayStore,
+      androidApkLink: CONFIG.androidApk,
+      iosStoreLink: CONFIG.iosAppStore,
+      iosTestFlightLink: CONFIG.iosTestFlight,
+    };
+
+    Object.entries(links).forEach(([id, href]) => {
+      document.getElementById(id).href = href;
+    });
+
+    const target = isAndroid
+      ? (CONFIG.preferBetaLinks ? CONFIG.androidApk : CONFIG.androidPlayStore)
+      : isIos
+        ? (CONFIG.preferBetaLinks ? CONFIG.iosTestFlight : CONFIG.iosAppStore)
+        : '';
+
+    if (target) {
+      window.setTimeout(() => {
+        window.location.href = target;
+      }, CONFIG.autoRedirectDelayMs);
+    } else {
+      document.getElementById('message').textContent =
+        'Төхөөрөмжөө сонгоод тохирох холбоосоор орно уу.';
+    }
+  </script>
+</body>
+</html>
