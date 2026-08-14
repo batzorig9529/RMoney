@@ -155,7 +155,7 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
   void initState() {
     super.initState();
     final record = widget.record;
-    amount = TextEditingController(text: record.amount.toString());
+    amount = TextEditingController(text: formatMoneyInput(record.amount));
     category = TextEditingController(
       text: record.type == MoneyType.expense ? '' : record.category,
     );
@@ -238,6 +238,7 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
             TextField(
               controller: amount,
               keyboardType: TextInputType.number,
+              inputFormatters: const [MoneyAmountInputFormatter()],
               decoration: const InputDecoration(
                 labelText: 'Дүн',
                 prefixIcon: Icon(Icons.payments_outlined),
@@ -361,8 +362,7 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
   }
 
   void _save(Map<String, LoanBalance> openLoans) {
-    final parsedAmount =
-        int.tryParse(amount.text.replaceAll(',', '').trim()) ?? 0;
+    final parsedAmount = parseMoneyInput(amount.text);
     final isLoanGiven = type == MoneyType.loanGiven;
     final isLoanRepayment = type == MoneyType.loanRepayment;
 

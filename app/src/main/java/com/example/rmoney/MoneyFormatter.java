@@ -15,4 +15,8 @@ public class MoneyFormatter {
     public static String mnt(long amount) {
         return FORMAT.format(amount) + " MNT";
     }
+
+    public static String input(long amount) {
+        return FORMAT.format(amount);
+    }
 }

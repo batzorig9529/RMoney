@@ -28,10 +28,10 @@ class _SavingsPageState extends State<SavingsPage> {
   @override
   void initState() {
     super.initState();
-    firstAmount =
-        TextEditingController(text: widget.savingsPlan.firstAmount.toString());
-    secondAmount =
-        TextEditingController(text: widget.savingsPlan.secondAmount.toString());
+    firstAmount = TextEditingController(
+        text: formatMoneyInput(widget.savingsPlan.firstAmount));
+    secondAmount = TextEditingController(
+        text: formatMoneyInput(widget.savingsPlan.secondAmount));
     firstDay = widget.savingsPlan.firstDay;
     secondDay = widget.savingsPlan.secondDay;
   }
@@ -40,8 +40,8 @@ class _SavingsPageState extends State<SavingsPage> {
   void didUpdateWidget(covariant SavingsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.savingsPlan != widget.savingsPlan) {
-      firstAmount.text = widget.savingsPlan.firstAmount.toString();
-      secondAmount.text = widget.savingsPlan.secondAmount.toString();
+      firstAmount.text = formatMoneyInput(widget.savingsPlan.firstAmount);
+      secondAmount.text = formatMoneyInput(widget.savingsPlan.secondAmount);
       firstDay = widget.savingsPlan.firstDay;
       secondDay = widget.savingsPlan.secondDay;
     }
@@ -88,6 +88,7 @@ class _SavingsPageState extends State<SavingsPage> {
         TextField(
           controller: firstAmount,
           keyboardType: TextInputType.number,
+          inputFormatters: const [MoneyAmountInputFormatter()],
           decoration: const InputDecoration(
               labelText: 'Эхний хадгалах дүн',
               prefixIcon: Icon(Icons.payments_outlined)),
@@ -106,6 +107,7 @@ class _SavingsPageState extends State<SavingsPage> {
         TextField(
           controller: secondAmount,
           keyboardType: TextInputType.number,
+          inputFormatters: const [MoneyAmountInputFormatter()],
           decoration: const InputDecoration(
               labelText: 'Дараагийн хадгалах дүн',
               prefixIcon: Icon(Icons.payments_outlined)),
@@ -121,10 +123,8 @@ class _SavingsPageState extends State<SavingsPage> {
   }
 
   Future<void> _save() async {
-    final first =
-        int.tryParse(firstAmount.text.replaceAll(',', '').trim()) ?? 0;
-    final second =
-        int.tryParse(secondAmount.text.replaceAll(',', '').trim()) ?? 0;
+    final first = parseMoneyInput(firstAmount.text);
+    final second = parseMoneyInput(secondAmount.text);
     if (firstDay < 1 || secondDay < 1 || first <= 0 || second <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Өдөр болон дүнгээ зөв оруулна уу')),

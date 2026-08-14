@@ -18,7 +18,9 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -105,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
         Spinner type = spinner(new String[]{"Орлого", "Зардал", "Хадгаламж", "Зээл өгөх", "Зээл буцаан авах"});
         TextInputEditText amount = input(root, "Дүн");
         amount.setInputType(InputType.TYPE_CLASS_NUMBER);
+        addMoneyFormatter(amount);
         TextInputEditText category = input(root, "Ангилал");
         Spinner necessity = spinner(new String[]{"Зайлшгүй", "Зайлшгүй бус"});
         TextInputEditText borrower = input(root, "Хэнд");
@@ -390,6 +393,41 @@ public class MainActivity extends AppCompatActivity {
         } catch (NumberFormatException ignored) {
             return 0L;
         }
+    }
+
+    private void addMoneyFormatter(EditText editText) {
+        editText.addTextChangedListener(new TextWatcher() {
+            private boolean formatting;
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if (formatting) {
+                    return;
+                }
+                String digits = editable.toString().replaceAll("[^0-9]", "");
+                if (digits.isEmpty()) {
+                    return;
+                }
+                try {
+                    String formatted = MoneyFormatter.input(Long.parseLong(digits));
+                    formatting = true;
+                    editText.setText(formatted);
+                    editText.setSelection(formatted.length());
+                } catch (NumberFormatException ignored) {
+                    // Keep the last valid visible value if the input is too large to parse.
+                } finally {
+                    formatting = false;
+                }
+            }
+        });
     }
 
     private String textOf(EditText editText) {

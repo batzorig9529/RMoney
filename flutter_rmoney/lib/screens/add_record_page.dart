@@ -66,6 +66,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
         TextField(
           controller: amount,
           keyboardType: TextInputType.number,
+          inputFormatters: const [MoneyAmountInputFormatter()],
           decoration: const InputDecoration(
               labelText: 'Дүн', prefixIcon: Icon(Icons.payments_outlined)),
         ),
@@ -225,8 +226,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
   }
 
   Future<void> _save() async {
-    final parsedAmount =
-        int.tryParse(amount.text.replaceAll(',', '').trim()) ?? 0;
+    final parsedAmount = parseMoneyInput(amount.text);
     final isLoanGiven = type == MoneyType.loanGiven;
     final isLoanRepayment = type == MoneyType.loanRepayment;
     if (parsedAmount <= 0) {
