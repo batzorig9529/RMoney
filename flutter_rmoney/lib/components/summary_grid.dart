@@ -24,6 +24,7 @@ class SummaryGrid extends StatelessWidget {
         Icons.account_balance_wallet_outlined
       ),
       ('Өдрийн боломж', summary.dailyBudget, Icons.today_outlined),
+      ('Үлдсэн мөнгө', summary.remainingMoney, Icons.account_balance_outlined),
       ...extraItems,
     ];
     return LayoutBuilder(
@@ -31,7 +32,7 @@ class SummaryGrid extends StatelessWidget {
         final columns = constraints.maxWidth > 640 ? 3 : 2;
         return LayoutBuilder(
           builder: (context, innerConstraints) {
-            final spacing = 10.0;
+            const spacing = 10.0;
             final tileWidth =
                 (innerConstraints.maxWidth - spacing * (columns - 1)) / columns;
             final textScale =

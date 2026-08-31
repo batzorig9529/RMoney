@@ -48,24 +48,37 @@ class _ExpenseChartState extends State<ExpenseChart> {
                         builder: (context, progress, child) {
                           return LayoutBuilder(
                             builder: (context, constraints) {
-                              return GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTapDown: (details) {
-                                  final tappedIndex =
-                                      ExpenseChartPainter.indexForPosition(
-                                    position: details.localPosition,
-                                    size: constraints.biggest,
-                                    itemCount: widget.values.length,
-                                  );
-                                  setState(() => selectedIndex = tappedIndex);
-                                },
-                                child: CustomPaint(
-                                  size: constraints.biggest,
-                                  painter: ExpenseChartPainter(
-                                    widget.values,
-                                    scheme.onSurfaceVariant,
-                                    progress,
-                                    selectedIndex,
+                              final chartWidth = max(
+                                constraints.maxWidth,
+                                ExpenseChartPainter.widthForItemCount(
+                                    widget.values.length),
+                              );
+                              return Scrollbar(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: SizedBox(
+                                    width: chartWidth,
+                                    height: constraints.maxHeight,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTapDown: (details) {
+                                        final tappedIndex = ExpenseChartPainter
+                                            .indexForPosition(
+                                          position: details.localPosition,
+                                          itemCount: widget.values.length,
+                                        );
+                                        setState(
+                                            () => selectedIndex = tappedIndex);
+                                      },
+                                      child: CustomPaint(
+                                        painter: ExpenseChartPainter(
+                                          widget.values,
+                                          scheme.onSurfaceVariant,
+                                          progress,
+                                          selectedIndex,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               );
@@ -105,6 +118,8 @@ class ExpenseChartPainter extends CustomPainter {
   final Color labelColor;
   final double progress;
   final int? selectedIndex;
+  static const gap = 14.0;
+  static const minBarWidth = 42.0;
   final colors = const [
     Color(0xFF2563EB),
     Color(0xFF16A34A),
@@ -116,18 +131,19 @@ class ExpenseChartPainter extends CustomPainter {
 
   static int? indexForPosition({
     required Offset position,
-    required Size size,
     required int itemCount,
   }) {
     if (itemCount == 0) return null;
-    const gap = 14.0;
-    final barWidth =
-        max(22.0, (size.width - gap * (itemCount + 1)) / itemCount);
-    final base = size.height - 34;
+    const barWidth = minBarWidth;
     for (var index = 0; index < itemCount; index++) {
       final left = gap + index * (barWidth + gap);
       final right = left + barWidth;
-      final touchRect = Rect.fromLTRB(left - gap / 2, 0, right + gap / 2, base);
+      final touchRect = Rect.fromLTRB(
+        left - gap / 2,
+        0,
+        right + gap / 2,
+        double.infinity,
+      );
       if (touchRect.contains(position)) {
         return index;
       }
@@ -135,13 +151,16 @@ class ExpenseChartPainter extends CustomPainter {
     return null;
   }
 
+  static double widthForItemCount(int itemCount) {
+    if (itemCount <= 0) return 0;
+    return gap * (itemCount + 1) + minBarWidth * itemCount;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..isAntiAlias = true;
     final maxValue = values.values.fold<int>(1, max);
-    const gap = 14.0;
-    final barWidth =
-        max(22.0, (size.width - gap * (values.length + 1)) / values.length);
+    const barWidth = minBarWidth;
     final base = size.height - 34;
     var index = 0;
     for (final entry in values.entries) {

@@ -8,10 +8,18 @@ import '../models/models.dart';
 import '../utils/utils.dart';
 
 class AddRecordPage extends StatefulWidget {
-  const AddRecordPage({super.key, required this.records, required this.onAdd});
+  const AddRecordPage({
+    super.key,
+    required this.records,
+    required this.expenseCategories,
+    required this.onAdd,
+    required this.onAddExpenseCategory,
+  });
 
   final List<MoneyRecord> records;
+  final List<String> expenseCategories;
   final Future<void> Function(MoneyRecord record) onAdd;
+  final Future<void> Function(String category) onAddExpenseCategory;
 
   @override
   State<AddRecordPage> createState() => _AddRecordPageState();
@@ -25,6 +33,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
   var type = MoneyType.income;
   var necessity = 'Зайлшгүй';
   var purchaseCategory = purchaseCategories.first;
+  var incomeCategory = incomeCategories.first;
   String? selectedRepaymentBorrower;
   var date = DateTime.now();
 
@@ -42,6 +51,10 @@ class _AddRecordPageState extends State<AddRecordPage> {
     final isExpense = type == MoneyType.expense;
     final isLoanGiven = type == MoneyType.loanGiven;
     final isLoanRepayment = type == MoneyType.loanRepayment;
+    final expenseCategoryOptions = _expenseCategoryOptions();
+    if (isExpense && !expenseCategoryOptions.contains(purchaseCategory)) {
+      purchaseCategory = expenseCategoryOptions.first;
+    }
     final openLoans = FinanceCalculator.openLoanBalances(widget.records);
     if (isLoanRepayment &&
         openLoans.isNotEmpty &&
@@ -53,7 +66,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
       subtitle: 'Орлого, зардал, хадгаламж, зээлээ бүртгэнэ',
       children: [
         DropdownButtonFormField<MoneyType>(
-          value: type,
+          initialValue: type,
           decoration: const InputDecoration(labelText: 'Төрөл'),
           items: MoneyType.values
               .map((item) =>
@@ -84,7 +97,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                 opacity: animation,
                 child: SizeTransition(
                   sizeFactor: animation,
-                  axisAlignment: -1,
+                  alignment: Alignment.topCenter,
                   child: child,
                 ),
               );
@@ -95,6 +108,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
               isLoanGiven: isLoanGiven,
               isLoanRepayment: isLoanRepayment,
               openLoans: openLoans,
+              expenseCategoryOptions: expenseCategoryOptions,
             ),
           ),
         ),
@@ -126,21 +140,30 @@ class _AddRecordPageState extends State<AddRecordPage> {
     required bool isLoanGiven,
     required bool isLoanRepayment,
     required Map<String, LoanBalance> openLoans,
+    required List<String> expenseCategoryOptions,
   }) {
     return Column(
       key: key,
       children: [
         if (isExpense)
-          DropdownButtonFormField<String>(
+          _ExpenseCategoryPicker(
             value: purchaseCategory,
+            categories: expenseCategoryOptions,
+            onChanged: (value) => setState(() => purchaseCategory = value),
+            onAdd: _addExpenseCategory,
+          )
+        else if (type == MoneyType.income)
+          DropdownButtonFormField<String>(
+            initialValue: incomeCategory,
             decoration: const InputDecoration(
-                labelText: 'Худалдан авалтын төрөл',
-                prefixIcon: Icon(Icons.category_outlined)),
-            items: purchaseCategories
+              labelText: 'Орлогын төрөл',
+              prefixIcon: Icon(Icons.category_outlined),
+            ),
+            items: incomeCategories
                 .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                 .toList(),
             onChanged: (value) => setState(
-                () => purchaseCategory = value ?? purchaseCategories.first),
+                () => incomeCategory = value ?? incomeCategories.first),
           )
         else
           TextField(
@@ -153,7 +176,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
         if (isExpense) ...[
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: necessity,
+            initialValue: necessity,
             decoration: const InputDecoration(labelText: 'Зардлын шаардлага'),
             items: const [
               DropdownMenuItem(value: 'Зайлшгүй', child: Text('Зайлшгүй')),
@@ -181,7 +204,7 @@ class _AddRecordPageState extends State<AddRecordPage> {
                     'Бүрэн төлөгдөөгүй зээл байхгүй тул буцаан авалт бүртгэх боломжгүй.')
           else
             DropdownButtonFormField<String>(
-              value: selectedRepaymentBorrower,
+              initialValue: selectedRepaymentBorrower,
               decoration: const InputDecoration(
                   labelText: 'Ямар зээлийн төлөлт вэ',
                   prefixIcon: Icon(Icons.person_outline)),
@@ -254,8 +277,11 @@ class _AddRecordPageState extends State<AddRecordPage> {
       type: type,
       amount: parsedAmount,
       date: date,
-      category:
-          type == MoneyType.expense ? purchaseCategory : category.text.trim(),
+      category: type == MoneyType.expense
+          ? purchaseCategory
+          : type == MoneyType.income
+              ? incomeCategory
+              : category.text.trim(),
       necessity: type == MoneyType.expense ? necessity : '',
       borrower: isLoanRepayment
           ? (selectedRepaymentBorrower ?? '')
@@ -268,7 +294,123 @@ class _AddRecordPageState extends State<AddRecordPage> {
     note.clear();
   }
 
+  List<String> _expenseCategoryOptions() {
+    final options = {
+      ...purchaseCategories,
+      ...widget.expenseCategories,
+      purchaseCategory,
+    }.where((item) => item.trim().isNotEmpty).toList();
+    if (options.isEmpty) return ['Бусад'];
+    return options;
+  }
+
+  Future<void> _addExpenseCategory() async {
+    final added = await showDialog<String>(
+      context: context,
+      builder: (context) => const _AddExpenseCategoryDialog(),
+    );
+    final trimmed = added?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    await widget.onAddExpenseCategory(trimmed);
+    if (mounted) {
+      setState(() => purchaseCategory = trimmed);
+    }
+  }
+
   void _toast(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
+
+class _ExpenseCategoryPicker extends StatelessWidget {
+  const _ExpenseCategoryPicker({
+    required this.value,
+    required this.categories,
+    required this.onChanged,
+    required this.onAdd,
+  });
+
+  final String value;
+  final List<String> categories;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: categories.contains(value) ? value : categories.first,
+            decoration: const InputDecoration(
+              labelText: 'Худалдан авалтын төрөл',
+              prefixIcon: Icon(Icons.category_outlined),
+            ),
+            isExpanded: true,
+            items: categories
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
+            onChanged: (value) => onChanged(value ?? categories.first),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: 'Төрөл нэмэх',
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddExpenseCategoryDialog extends StatefulWidget {
+  const _AddExpenseCategoryDialog();
+
+  @override
+  State<_AddExpenseCategoryDialog> createState() =>
+      _AddExpenseCategoryDialogState();
+}
+
+class _AddExpenseCategoryDialogState extends State<_AddExpenseCategoryDialog> {
+  final controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Зардлын төрөл нэмэх'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          labelText: 'Шинэ төрөл',
+          prefixIcon: Icon(Icons.category_outlined),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Болих'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.add),
+          label: const Text('Нэмэх'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    Navigator.pop(context, controller.text.trim());
   }
 }

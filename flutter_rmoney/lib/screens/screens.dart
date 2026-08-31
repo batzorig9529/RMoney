@@ -1,4 +1,5 @@
 export 'add_record_page.dart';
+export 'ai_advice_page.dart';
 export 'dashboard_page.dart';
 export 'home_page.dart';
 export 'loans_page.dart';

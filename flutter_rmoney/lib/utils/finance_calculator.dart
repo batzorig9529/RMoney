@@ -35,10 +35,15 @@ class FinanceCalculator {
 
     final reserved = (income * 0.10).round();
     final daysInPeriod = period.end.difference(period.start).inDays;
-    final dailyBudget = max(0,
-        ((income - reserved - savingsPlan.totalTarget) / daysInPeriod).floor());
+    final normalizedToday = DateTime(today.year, today.month, today.day);
+    final remainingDays = max(1, period.end.difference(normalizedToday).inDays);
+    final protectedSavings = max<int>(savings, savingsPlan.totalTarget);
+    final remainingMoney = income - reserved - protectedSavings - expense;
+    final dailyBudget = max<int>(0, (remainingMoney / remainingDays).floor());
     final dayForLimit = period.dayNumber(today);
-    final expected = dailyBudget * dayForLimit;
+    final originalDailyBudget = max(0,
+        ((income - reserved - savingsPlan.totalTarget) / daysInPeriod).floor());
+    final expected = originalDailyBudget * dayForLimit;
     if (savings > 0) {
       extraOutflow['Хадгаламж'] = savings;
     }
@@ -56,6 +61,8 @@ class FinanceCalculator {
       savings: savings,
       reservedTenPercent: reserved,
       dailyBudget: dailyBudget,
+      remainingDays: remainingDays,
+      remainingMoney: max<int>(0, remainingMoney),
       expectedSpendingToDate: expected,
       overspending: dailyBudget > 0 && expense > expected,
       expensesByCategory: byCategory,
@@ -141,6 +148,50 @@ class FinanceCalculator {
   static bool needsUrgentSavingsReminder(
       FinanceSummary summary, DateTime today, SavingsPlan plan) {
     return today.day >= plan.secondDay && summary.savings < plan.totalTarget;
+  }
+
+  static String aiAssessment(FinanceSummary summary) {
+    return aiAdviceItems(summary).join('\n');
+  }
+
+  static List<String> aiAdviceItems(FinanceSummary summary) {
+    if (summary.income <= 0) {
+      return [
+        'Энэ үед орлого бүртгэгдээгүй байна.',
+        'Орлогоо нэмбэл өдрийн боломж болон зарцуулалтын үнэлгээ илүү бодитой гарна.',
+      ];
+    }
+
+    final expenseRate = summary.expense / summary.income;
+    final savingsTargetMet = summary.savings >= summary.reservedTenPercent;
+    final lines = <String>[];
+
+    if (expenseRate >= 0.75) {
+      lines.add(
+          'Зардал орлогын ${(expenseRate * 100).round()}%-д хүрсэн байна. Зайлшгүй бус зардлаа түр хязгаарлах нь зөв.');
+    } else if (expenseRate >= 0.5) {
+      lines.add(
+          'Зардал дунд түвшинд байна. Том худалдан авалтаа үлдсэн хоногийн өдрийн боломжтой тулгаж шийдээрэй.');
+    } else {
+      lines.add(
+          'Зардлын харьцаа боломжийн байна. Энэ хэмнэлээ хадгалбал сарын төгсгөлд илүү тайван үлдэгдэлтэй байна.');
+    }
+
+    if (summary.dailyBudget <= 0) {
+      lines.add(
+          'Үлдсэн өдрийн боломж 0 болсон тул нэмэлт орлого орох хүртэл шинэ зардал нэмэхгүй байхыг санал болгож байна.');
+    } else {
+      lines.add(
+          'Өдөрт дунджаар ${NumberFormat.decimalPattern().format(summary.dailyBudget)} төгрөг зарцуулах боломжтой.');
+    }
+
+    if (!savingsTargetMet) {
+      lines.add('10% нөөц/хадгаламжийн түвшин дутуу байна.');
+    } else {
+      lines.add('Нөөц бүрдүүлэлт сайн байна.');
+    }
+
+    return lines;
   }
 
   static bool sameMonth(DateTime first, DateTime second) {

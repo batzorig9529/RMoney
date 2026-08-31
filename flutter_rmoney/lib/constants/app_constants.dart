@@ -17,3 +17,8 @@ const purchaseCategories = [
   'Гоо сайхан',
   'Бусад',
 ];
+
+const incomeCategories = [
+  'Тогтмол',
+  'Гэнэтийн',
+];

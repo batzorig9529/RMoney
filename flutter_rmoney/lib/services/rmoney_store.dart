@@ -57,6 +57,29 @@ class RMoneyStore {
     await _writeRoot(root);
   }
 
+  Future<List<String>> loadExpenseCategories() async {
+    try {
+      final root = await _readRoot();
+      return (root['expenseCategories'] as List<dynamic>? ?? [])
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toSet()
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<void> saveExpenseCategories(List<String> categories) async {
+    final root = await _readRoot();
+    root['expenseCategories'] = categories
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList();
+    await _writeRoot(root);
+  }
+
   Future<void> add(MoneyRecord record) async {
     final records = await load();
     records.add(record);

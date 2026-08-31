@@ -82,9 +82,9 @@ class PeriodComparisonPainter extends CustomPainter {
     final paint = Paint()..isAntiAlias = true;
     final maxExpense =
         items.map((item) => item.expense).fold<int>(1, (a, b) => max(a, b));
-    final gap = 12.0;
+    const gap = 12.0;
     final base = size.height - 42;
-    final top = 30.0;
+    const top = 30.0;
     final barWidth =
         max(20.0, (size.width - gap * (items.length + 1)) / items.length);
 

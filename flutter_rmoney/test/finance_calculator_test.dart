@@ -16,7 +16,7 @@ void main() {
       MoneyRecord(
           id: '1',
           type: MoneyType.income,
-          amount: 1000000,
+          amount: 2000000,
           date: DateTime(2026, 7, 5)),
       MoneyRecord(
           id: '2',
@@ -32,10 +32,12 @@ void main() {
 
     final summary = FinanceCalculator.summarizeMonth(records, month, today);
 
-    expect(summary.income, 1200000);
-    expect(summary.reservedTenPercent, 120000);
-    expect(summary.dailyBudget,
-        ((1200000 - 120000 - const SavingsPlan().totalTarget) / 31).floor());
+    expect(summary.income, 2200000);
+    expect(summary.reservedTenPercent, 220000);
+    expect(
+        summary.dailyBudget,
+        ((2200000 - 220000 - const SavingsPlan().totalTarget - 100000) / 26)
+            .floor());
     expect(summary.expense, 100000);
   });
 
@@ -107,6 +109,8 @@ void main() {
       savings: 499999,
       reservedTenPercent: 0,
       dailyBudget: 0,
+      remainingDays: 1,
+      remainingMoney: 0,
       expectedSpendingToDate: 0,
       overspending: false,
       expensesByCategory: {},
@@ -217,5 +221,38 @@ void main() {
     expect(comparisons.first.expense, 10000);
     expect(comparisons.last.expense, 50000);
     expect(comparisons.last.income, 100000);
+  });
+
+  test('ai assessment explains missing income and daily budget', () {
+    final emptySummary = FinanceCalculator.summarizeMonth(
+      const [],
+      DateTime(2026, 7, 10),
+      DateTime(2026, 7, 10),
+    );
+
+    expect(FinanceCalculator.aiAssessment(emptySummary), contains('орлого'));
+    expect(FinanceCalculator.aiAdviceItems(emptySummary), isNotEmpty);
+
+    final summary = FinanceCalculator.summarizeMonth(
+      [
+        MoneyRecord(
+          id: 'income',
+          type: MoneyType.income,
+          amount: 2000000,
+          date: DateTime(2026, 7, 5),
+        ),
+        MoneyRecord(
+          id: 'expense',
+          type: MoneyType.expense,
+          amount: 200000,
+          date: DateTime(2026, 7, 6),
+        ),
+      ],
+      DateTime(2026, 7, 10),
+      DateTime(2026, 7, 10),
+    );
+
+    expect(FinanceCalculator.aiAssessment(summary), contains('Өдөрт'));
+    expect(FinanceCalculator.aiAdviceItems(summary), isNotEmpty);
   });
 }

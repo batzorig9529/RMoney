@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/rmoney_store.dart';
 import 'add_record_page.dart';
+import 'ai_advice_page.dart';
 import 'dashboard_page.dart';
 import 'loans_page.dart';
 import 'reports_page.dart';
@@ -21,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   var tab = 0;
   var records = <MoneyRecord>[];
   var savingsPlan = const SavingsPlan();
+  var expenseCategories = <String>[];
 
   @override
   void initState() {
@@ -31,10 +33,12 @@ class _HomePageState extends State<HomePage> {
   Future<void> _load() async {
     final loaded = await store.load();
     final loadedPlan = await store.loadSavingsPlan();
+    final loadedExpenseCategories = await store.loadExpenseCategories();
     if (mounted) {
       setState(() {
         records = loaded;
         savingsPlan = loadedPlan;
+        expenseCategories = loadedExpenseCategories;
       });
     }
   }
@@ -60,6 +64,14 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _addExpenseCategory(String category) async {
+    final trimmed = category.trim();
+    if (trimmed.isEmpty) return;
+    final updated = {...expenseCategories, trimmed}.toList()..sort();
+    await store.saveExpenseCategories(updated);
+    await _load();
+  }
+
   Future<void> _update(MoneyRecord record) async {
     final updated = records
         .map((item) => item.id == record.id ? record : item)
@@ -74,9 +86,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _delete(MoneyRecord record) async {
-    final updated = records
-        .where((item) => item.id != record.id)
-        .toList(growable: false);
+    final updated =
+        records.where((item) => item.id != record.id).toList(growable: false);
     await store.save(updated);
     await _load();
     if (mounted) {
@@ -90,8 +101,19 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final pages = [
       DashboardPage(records: records, savingsPlan: savingsPlan),
-      AddRecordPage(records: records, onAdd: _add),
-      TransactionsPage(records: records, onUpdate: _update, onDelete: _delete),
+      AddRecordPage(
+        records: records,
+        expenseCategories: expenseCategories,
+        onAdd: _add,
+        onAddExpenseCategory: _addExpenseCategory,
+      ),
+      TransactionsPage(
+        records: records,
+        expenseCategories: expenseCategories,
+        onUpdate: _update,
+        onDelete: _delete,
+        onAddExpenseCategory: _addExpenseCategory,
+      ),
       LoansPage(records: records),
       SavingsPage(
           records: records, savingsPlan: savingsPlan, onSave: _saveSavingsPlan),
@@ -100,6 +122,15 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       body: SafeArea(child: pages[tab]),
+      floatingActionButton: FloatingActionButton(
+        tooltip: 'AI үнэлгээ',
+        shape: const CircleBorder(),
+        onPressed: _openAiAdvice,
+        child: const Text(
+          'AI',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
         onDestinationSelected: (index) => setState(() => tab = index),
@@ -129,6 +160,17 @@ class _HomePageState extends State<HomePage> {
               selectedIcon: Icon(Icons.bar_chart),
               label: 'Тайлан'),
         ],
+      ),
+    );
+  }
+
+  void _openAiAdvice() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AiAdvicePage(
+          records: records,
+          savingsPlan: savingsPlan,
+        ),
       ),
     );
   }

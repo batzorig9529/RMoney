@@ -10,13 +10,17 @@ class TransactionsPage extends StatefulWidget {
   const TransactionsPage({
     super.key,
     required this.records,
+    required this.expenseCategories,
     required this.onUpdate,
     required this.onDelete,
+    required this.onAddExpenseCategory,
   });
 
   final List<MoneyRecord> records;
+  final List<String> expenseCategories;
   final Future<void> Function(MoneyRecord record) onUpdate;
   final Future<void> Function(MoneyRecord record) onDelete;
+  final Future<void> Function(String category) onAddExpenseCategory;
 
   @override
   State<TransactionsPage> createState() => _TransactionsPageState();
@@ -95,8 +99,12 @@ class _TransactionsPageState extends State<TransactionsPage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) =>
-          _EditRecordSheet(record: record, records: widget.records),
+      builder: (context) => _EditRecordSheet(
+        record: record,
+        records: widget.records,
+        expenseCategories: widget.expenseCategories,
+        onAddExpenseCategory: widget.onAddExpenseCategory,
+      ),
     );
     if (updated != null) {
       await widget.onUpdate(updated);
@@ -131,10 +139,17 @@ class _TransactionsPageState extends State<TransactionsPage> {
 }
 
 class _EditRecordSheet extends StatefulWidget {
-  const _EditRecordSheet({required this.record, required this.records});
+  const _EditRecordSheet({
+    required this.record,
+    required this.records,
+    required this.expenseCategories,
+    required this.onAddExpenseCategory,
+  });
 
   final MoneyRecord record;
   final List<MoneyRecord> records;
+  final List<String> expenseCategories;
+  final Future<void> Function(String category) onAddExpenseCategory;
 
   @override
   State<_EditRecordSheet> createState() => _EditRecordSheetState();
@@ -148,6 +163,7 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
   late MoneyType type;
   late String necessity;
   late String purchaseCategory;
+  late String incomeCategory;
   late DateTime date;
   String? selectedRepaymentBorrower;
 
@@ -165,9 +181,13 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
     note = TextEditingController(text: record.note);
     type = record.type;
     necessity = record.necessity.isEmpty ? 'Зайлшгүй' : record.necessity;
-    purchaseCategory = purchaseCategories.contains(record.category)
+    purchaseCategory =
+        record.type == MoneyType.expense && record.category.trim().isNotEmpty
+            ? record.category
+            : purchaseCategories.first;
+    incomeCategory = incomeCategories.contains(record.category)
         ? record.category
-        : purchaseCategories.first;
+        : incomeCategories.first;
     selectedRepaymentBorrower =
         record.type == MoneyType.loanRepayment ? record.borrower : null;
     date = record.date;
@@ -191,6 +211,10 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
         .where((record) => record.id != widget.record.id)
         .toList();
     final openLoans = FinanceCalculator.openLoanBalances(editableRecords);
+    final expenseCategoryOptions = _expenseCategoryOptions();
+    if (isExpense && !expenseCategoryOptions.contains(purchaseCategory)) {
+      purchaseCategory = expenseCategoryOptions.first;
+    }
     if (isLoanRepayment &&
         openLoans.isNotEmpty &&
         !openLoans.containsKey(selectedRepaymentBorrower)) {
@@ -246,18 +270,25 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
             ),
             const SizedBox(height: 12),
             if (isExpense)
+              _ExpenseCategoryPicker(
+                value: purchaseCategory,
+                categories: expenseCategoryOptions,
+                onChanged: (value) => setState(() => purchaseCategory = value),
+                onAdd: _addExpenseCategory,
+              )
+            else if (type == MoneyType.income)
               DropdownButtonFormField<String>(
-                initialValue: purchaseCategory,
+                initialValue: incomeCategory,
                 decoration: const InputDecoration(
-                  labelText: 'Худалдан авалтын төрөл',
+                  labelText: 'Орлогын төрөл',
                   prefixIcon: Icon(Icons.category_outlined),
                 ),
-                items: purchaseCategories
+                items: incomeCategories
                     .map((item) =>
                         DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
                 onChanged: (value) => setState(
-                    () => purchaseCategory = value ?? purchaseCategories.first),
+                    () => incomeCategory = value ?? incomeCategories.first),
               )
             else
               TextField(
@@ -392,8 +423,11 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
         type: type,
         amount: parsedAmount,
         date: date,
-        category:
-            type == MoneyType.expense ? purchaseCategory : category.text.trim(),
+        category: type == MoneyType.expense
+            ? purchaseCategory
+            : type == MoneyType.income
+                ? incomeCategory
+                : category.text.trim(),
         necessity: type == MoneyType.expense ? necessity : '',
         borrower: isLoanRepayment
             ? (selectedRepaymentBorrower ?? '')
@@ -405,5 +439,121 @@ class _EditRecordSheetState extends State<_EditRecordSheet> {
 
   void _toast(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  List<String> _expenseCategoryOptions() {
+    final options = {
+      ...purchaseCategories,
+      ...widget.expenseCategories,
+      purchaseCategory,
+    }.where((item) => item.trim().isNotEmpty).toList();
+    if (options.isEmpty) return ['Бусад'];
+    return options;
+  }
+
+  Future<void> _addExpenseCategory() async {
+    final added = await showDialog<String>(
+      context: context,
+      builder: (context) => const _AddExpenseCategoryDialog(),
+    );
+    final trimmed = added?.trim();
+    if (trimmed == null || trimmed.isEmpty) return;
+    await widget.onAddExpenseCategory(trimmed);
+    if (mounted) {
+      setState(() => purchaseCategory = trimmed);
+    }
+  }
+}
+
+class _ExpenseCategoryPicker extends StatelessWidget {
+  const _ExpenseCategoryPicker({
+    required this.value,
+    required this.categories,
+    required this.onChanged,
+    required this.onAdd,
+  });
+
+  final String value;
+  final List<String> categories;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: categories.contains(value) ? value : categories.first,
+            decoration: const InputDecoration(
+              labelText: 'Худалдан авалтын төрөл',
+              prefixIcon: Icon(Icons.category_outlined),
+            ),
+            isExpanded: true,
+            items: categories
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
+            onChanged: (value) => onChanged(value ?? categories.first),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filledTonal(
+          tooltip: 'Төрөл нэмэх',
+          onPressed: onAdd,
+          icon: const Icon(Icons.add),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddExpenseCategoryDialog extends StatefulWidget {
+  const _AddExpenseCategoryDialog();
+
+  @override
+  State<_AddExpenseCategoryDialog> createState() =>
+      _AddExpenseCategoryDialogState();
+}
+
+class _AddExpenseCategoryDialogState extends State<_AddExpenseCategoryDialog> {
+  final controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Зардлын төрөл нэмэх'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: const InputDecoration(
+          labelText: 'Шинэ төрөл',
+          prefixIcon: Icon(Icons.category_outlined),
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Болих'),
+        ),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.add),
+          label: const Text('Нэмэх'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    Navigator.pop(context, controller.text.trim());
   }
 }

@@ -77,7 +77,7 @@ class _SavingsPageState extends State<SavingsPage> {
               '${widget.savingsPlan.firstDay}-нд ${formatMnt(widget.savingsPlan.firstAmount)}\n${widget.savingsPlan.secondDay}-нд ${formatMnt(widget.savingsPlan.secondAmount)}\nНийт: ${formatMnt(widget.savingsPlan.totalTarget)}',
         ),
         DropdownButtonFormField<int>(
-          value: firstDay,
+          initialValue: firstDay,
           decoration: const InputDecoration(labelText: 'Эхний сануулах өдөр'),
           items: List.generate(31, (index) => index + 1)
               .map((day) => DropdownMenuItem(value: day, child: Text('$day')))
@@ -95,7 +95,7 @@ class _SavingsPageState extends State<SavingsPage> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<int>(
-          value: secondDay,
+          initialValue: secondDay,
           decoration:
               const InputDecoration(labelText: 'Дараагийн сануулах өдөр'),
           items: List.generate(31, (index) => index + 1)
