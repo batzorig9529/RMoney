@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../services/ad_service.dart';
+
 class AppLock extends StatefulWidget {
   const AppLock({super.key, required this.child, this.authenticate, this.now});
 
@@ -19,6 +21,7 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
   final _auth = LocalAuthentication();
   static const _idleLimit = Duration(minutes: 5);
   Timer? _idleTimer;
+  Timer? _adTimer;
   DateTime? _lastActivity;
   DateTime get _now => widget.now?.call() ?? DateTime.now();
   bool _unlocked = false;
@@ -40,6 +43,7 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     HardwareKeyboard.instance.removeHandler(_onKey);
     _idleTimer?.cancel();
+    _adTimer?.cancel();
     super.dispose();
   }
 
@@ -61,6 +65,11 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
         } else {
           _recordActivity();
         }
+      }
+      if (state == AppLifecycleState.resumed && _unlocked) {
+        _startAdTimer();
+      } else {
+        _adTimer?.cancel();
       }
     });
     if (state == AppLifecycleState.resumed && !_unlocked && !_busy) {
@@ -113,6 +122,16 @@ class _AppLockState extends State<AppLock> with WidgetsBindingObserver {
       _message = message;
     });
     _recordActivity();
+    if (_unlocked) _startAdTimer();
+  }
+
+  void _startAdTimer() {
+    _adTimer?.cancel();
+    _adTimer = Timer.periodic(AdService.minInterval, (_) {
+      if (_unlocked && _lifecycle == AppLifecycleState.resumed) {
+        AdService.instance.maybeShow();
+      }
+    });
   }
 
   @override

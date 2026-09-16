@@ -25,6 +25,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
   await NotificationService.requestPermission();
+  await AdService.instance.initialize();
   await Workmanager().initialize(callbackDispatcher);
   await Workmanager().registerPeriodicTask(
     reminderTask,

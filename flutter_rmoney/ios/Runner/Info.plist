@@ -4,6 +4,10 @@
 <dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Authenticate to access your RMoney financial records.</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-4703508710013914~4917630151</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Таны хэрэглээнд тохирсон сурталчилгаа харуулахад ашиглагдана.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
