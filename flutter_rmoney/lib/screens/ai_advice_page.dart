@@ -20,7 +20,8 @@ class AiAdvicePage extends StatelessWidget {
     final period = FinanceCalculator.periodFor(now);
     final summary =
         FinanceCalculator.summarizeMonth(records, now, now, savingsPlan);
-    final adviceItems = FinanceCalculator.aiAdviceItems(summary);
+    final adviceItems = FinanceCalculator.aiAdviceItems(summary, savingsPlan);
+    final score = FinanceCalculator.aiScore(summary);
 
     return Scaffold(
       appBar: AppBar(
@@ -30,6 +31,48 @@ class AiAdvicePage extends StatelessWidget {
         title: 'AI үнэлгээ',
         subtitle: '${FinanceCalculator.periodLabel(period)} зөвлөгөө',
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(score == null ? 'Оноо хараахан гараагүй' : '$score / 5',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                Text(FinanceCalculator.aiScoreLabel(score),
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Semantics(
+                  label:
+                      score == null ? 'Үнэлгээ байхгүй' : '5-аас $score оноо',
+                  child: Row(
+                      children: List.generate(
+                          5,
+                          (index) => Icon(
+                                index < (score ?? 0)
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: Theme.of(context).colorScheme.primary,
+                              ))),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                    'Бүртгэсэн гүйлгээнд үндэслэсэн төсвийн үнэлгээ. Зээлийн оноо биш.'),
+                const SizedBox(height: 12),
+                ...FinanceCalculator.aiScoreFactors(summary).entries.map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(children: [
+                          Expanded(child: Text(entry.key)),
+                          Text('${entry.value} / 5'),
+                        ]),
+                      ),
+                    ),
+                if (score != null)
+                  const Text(
+                      'Гурван үзүүлэлтийн дундаж. Зардал орлогод хүрвэл 1; төсвийн үлдэгдэлгүй бол дээд тал нь 2 оноо.'),
+              ],
+            ),
+          ),
           SummaryGrid(
             summary: summary,
             extraItems: [
@@ -37,10 +80,6 @@ class AiAdvicePage extends StatelessWidget {
             ],
           ),
           _AdvicePanel(items: adviceItems),
-          InfoCard(
-            title: 'Товч дүгнэлт',
-            body: FinanceCalculator.aiAssessment(summary),
-          ),
         ],
       ),
     );

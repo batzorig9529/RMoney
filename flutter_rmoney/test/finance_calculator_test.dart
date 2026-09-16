@@ -3,6 +3,47 @@ import 'package:rmoney_flutter/models/models.dart';
 import 'package:rmoney_flutter/utils/finance_calculator.dart';
 
 void main() {
+  FinanceSummary assessment(int income, int expense, int savings) {
+    final date = DateTime(2026, 7, 30);
+    return FinanceCalculator.summarizeMonth([
+      MoneyRecord(id: 'i', type: MoneyType.income, amount: income, date: date),
+      MoneyRecord(
+          id: 'e',
+          type: MoneyType.expense,
+          amount: expense,
+          date: date,
+          category: 'Дэлгүүр',
+          necessity: 'Зайлшгүй бус'),
+      MoneyRecord(
+          id: 's', type: MoneyType.savings, amount: savings, date: date),
+    ], date, date, const SavingsPlan(firstAmount: 0, secondAmount: 0));
+  }
+
+  test('assessment with no income has no invented rating', () {
+    expect(FinanceCalculator.aiScore(assessment(0, 100, 0)), isNull);
+    expect(FinanceCalculator.aiScoreFactors(assessment(0, 0, 0)), isEmpty);
+  });
+
+  test('rating covers all five levels and caps exhausted budgets', () {
+    expect(FinanceCalculator.aiScore(assessment(100000, 100000, 0)), 1);
+    expect(FinanceCalculator.aiScore(assessment(100000, 95000, 0)), 2);
+    expect(FinanceCalculator.aiScore(assessment(100000, 70000, 0)), 3);
+    expect(FinanceCalculator.aiScore(assessment(100000, 60000, 15000)), 4);
+    expect(FinanceCalculator.aiScore(assessment(100000, 40000, 20000)), 5);
+    expect(FinanceCalculator.aiScore(assessment(100000, 40000, 60000)), 2);
+  });
+
+  test('advice uses actual categories and configured savings target', () {
+    final advice = FinanceCalculator.aiAdviceItems(
+      assessment(100000, 40000, 10000),
+      const SavingsPlan(firstAmount: 20000, secondAmount: 10000),
+    ).join('\n');
+    expect(advice, contains('20,000'));
+    expect(advice, contains('8,000'));
+    expect(advice, contains('Дэлгүүр'));
+    expect(advice, contains('100%'));
+  });
+
   test('period summary reserves 10 percent and includes loan repayment income',
       () {
     final month = DateTime(2026, 7, 5);
@@ -34,10 +75,7 @@ void main() {
 
     expect(summary.income, 2200000);
     expect(summary.reservedTenPercent, 220000);
-    expect(
-        summary.dailyBudget,
-        ((2200000 - 220000 - const SavingsPlan().totalTarget - 100000) / 26)
-            .floor());
+    expect(summary.dailyBudget, ((2200000 - 220000 - 100000) / 26).floor());
     expect(summary.expense, 100000);
   });
 

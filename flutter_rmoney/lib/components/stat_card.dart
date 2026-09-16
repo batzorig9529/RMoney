@@ -16,19 +16,33 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final outgoing = icon == Icons.trending_down || icon == Icons.north_east;
+    final color = outgoing ? const Color(0xFFE78272) : scheme.secondary;
     return Card(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.82),
+      color: scheme.surfaceContainer,
+      elevation: 2,
+      shadowColor: color.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 26),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8)),
+              child: Icon(icon, color: color, size: 19),
+            ),
             const Spacer(),
             Text(title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,

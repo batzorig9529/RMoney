@@ -1,0 +1,9 @@
+{
+  "name": "rmoney-finance-scene",
+  "private": true,
+  "scripts": {
+    "build": "esbuild scene.js --bundle --minify --format=iife --outfile=../../assets/scene/scene.bundle.js"
+  },
+  "dependencies": { "three": "0.180.0" },
+  "devDependencies": { "esbuild": "0.25.10" }
+}

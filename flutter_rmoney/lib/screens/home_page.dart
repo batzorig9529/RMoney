@@ -100,7 +100,11 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      DashboardPage(records: records, savingsPlan: savingsPlan),
+      DashboardPage(
+          records: records,
+          savingsPlan: savingsPlan,
+          onAdd: () => setState(() => tab = 1),
+          onAdvice: _openAiAdvice),
       AddRecordPage(
         records: records,
         expenseCategories: expenseCategories,
@@ -122,15 +126,14 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       body: SafeArea(child: pages[tab]),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'AI үнэлгээ',
-        shape: const CircleBorder(),
-        onPressed: _openAiAdvice,
-        child: const Text(
-          'AI',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
+      floatingActionButton: tab == 0
+          ? null
+          : FloatingActionButton(
+              tooltip: 'AI үнэлгээ',
+              shape: const CircleBorder(),
+              onPressed: _openAiAdvice,
+              child: const Icon(Icons.auto_awesome),
+            ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
         onDestinationSelected: (index) => setState(() => tab = index),

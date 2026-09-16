@@ -37,8 +37,7 @@ class FinanceCalculator {
     final daysInPeriod = period.end.difference(period.start).inDays;
     final normalizedToday = DateTime(today.year, today.month, today.day);
     final remainingDays = max(1, period.end.difference(normalizedToday).inDays);
-    final protectedSavings = max<int>(savings, savingsPlan.totalTarget);
-    final remainingMoney = income - reserved - protectedSavings - expense;
+    final remainingMoney = income - reserved - savings - expense;
     final dailyBudget = max<int>(0, (remainingMoney / remainingDays).floor());
     final dayForLimit = period.dayNumber(today);
     final originalDailyBudget = max(0,
@@ -154,7 +153,67 @@ class FinanceCalculator {
     return aiAdviceItems(summary).join('\n');
   }
 
-  static List<String> aiAdviceItems(FinanceSummary summary) {
+  // A budgeting indicator for recorded activity, not a credit rating.
+  static Map<String, int> aiScoreFactors(FinanceSummary summary) {
+    if (summary.income <= 0) return {};
+    final expenseRate = summary.expense / summary.income;
+    final savingsRate = summary.savings / summary.income;
+    final pace = summary.expectedSpendingToDate;
+    return {
+      'Зардал / орлого': expenseRate <= 0.5
+          ? 5
+          : expenseRate <= 0.65
+              ? 4
+              : expenseRate <= 0.8
+                  ? 3
+                  : expenseRate < 1
+                      ? 2
+                      : 1,
+      'Хадгаламж / орлого': savingsRate >= 0.2
+          ? 5
+          : savingsRate >= 0.15
+              ? 4
+              : savingsRate >= 0.1
+                  ? 3
+                  : savingsRate > 0
+                      ? 2
+                      : 1,
+      'Төсвийн хэмнэл': summary.expense == 0
+          ? 5
+          : pace <= 0
+              ? 1
+              : summary.expense <= pace
+                  ? 5
+                  : summary.expense <= pace * 1.1
+                      ? 4
+                      : summary.expense <= pace * 1.25
+                          ? 3
+                          : summary.expense <= pace * 1.5
+                              ? 2
+                              : 1,
+    };
+  }
+
+  static int? aiScore(FinanceSummary summary) {
+    final factors = aiScoreFactors(summary);
+    if (factors.isEmpty) return null;
+    if (summary.expense >= summary.income) return 1;
+    final score =
+        (factors.values.reduce((a, b) => a + b) / factors.length).round();
+    return summary.remainingMoney <= 0 ? min(2, score) : score;
+  }
+
+  static String aiScoreLabel(int? score) => switch (score) {
+        1 => 'Анхаарал шаардлагатай',
+        2 => 'Сайжруулах хэрэгтэй',
+        3 => 'Дундаж',
+        4 => 'Сайн',
+        5 => 'Маш сайн',
+        _ => 'Мэдээлэл дутуу',
+      };
+
+  static List<String> aiAdviceItems(FinanceSummary summary,
+      [SavingsPlan? plan]) {
     if (summary.income <= 0) {
       return [
         'Энэ үед орлого бүртгэгдээгүй байна.',
@@ -163,8 +222,16 @@ class FinanceCalculator {
     }
 
     final expenseRate = summary.expense / summary.income;
-    final savingsTargetMet = summary.savings >= summary.reservedTenPercent;
+    final target = max(summary.reservedTenPercent, plan?.totalTarget ?? 0);
+    final savingsTargetMet = summary.savings >= target;
+    String money(int value) =>
+        '${NumberFormat.decimalPattern().format(value)} ₮';
     final lines = <String>[];
+
+    if (summary.expense >= summary.income) {
+      lines.add(
+          'Зардал орлогод хүрсэн эсвэл давсан байна. Зөрүү: ${money(summary.expense - summary.income)}. Эхлээд зайлшгүй төлбөрүүдээ эрэмбэлж, хойшлуулж болох худалдан авалтаа түр азнаарай.');
+    }
 
     if (expenseRate >= 0.75) {
       lines.add(
@@ -179,16 +246,40 @@ class FinanceCalculator {
 
     if (summary.dailyBudget <= 0) {
       lines.add(
-          'Үлдсэн өдрийн боломж 0 болсон тул нэмэлт орлого орох хүртэл шинэ зардал нэмэхгүй байхыг санал болгож байна.');
+          'Нөөц болон хадгаламжийн зорилгыг тооцсоны дараах өдрийн төсөв 0 байна. Зайлшгүй төлбөрөө шалгаж, хадгаламжийн зорилгоо бодит орлоготойгоо тохируулаарай.');
     } else {
       lines.add(
           'Өдөрт дунджаар ${NumberFormat.decimalPattern().format(summary.dailyBudget)} төгрөг зарцуулах боломжтой.');
     }
 
     if (!savingsTargetMet) {
-      lines.add('10% нөөц/хадгаламжийн түвшин дутуу байна.');
+      final gap = target - summary.savings;
+      lines.add(
+          'Хадгаламжийн зорилгод ${money(gap)} дутуу байна. Үлдсэн ${summary.remainingDays} хоногт өдөрт ${money((gap / summary.remainingDays).ceil())} хуримтлуулах шаардлагатай. Зайлшгүй зардлын дараах бодит үлдэгдэлдээ тааруулж төлөвлөөрэй.');
     } else {
       lines.add('Нөөц бүрдүүлэлт сайн байна.');
+    }
+
+    if (summary.expense > summary.expectedSpendingToDate) {
+      lines.add(
+          'Энэ өдрийн төлөвлөсөн зардлаас ${money(summary.expense - summary.expectedSpendingToDate)} илүү зарцуулсан байна. Үлдсэн хугацааны өдрийн төсвөө баримтлаарай.');
+    }
+    final optional = summary.expensesByNecessity['Зайлшгүй бус'] ?? 0;
+    if (optional > 0) {
+      lines.add(
+          'Зайлшгүй бус зардал ${money(optional)} байна. Үүнийг 20% бууруулбал ${money((optional * 0.2).round())} хэмнэх боломжтой.');
+    }
+    final categories = summary.expensesByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    if (categories.isNotEmpty && summary.expense > 0) {
+      final largest = categories.first;
+      lines.add(
+          'Хамгийн их зардал: ${largest.key}, ${money(largest.value)} (${(largest.value / summary.expense * 100).round()}%). Энэ ангиллын давтагддаг төлбөрүүдээ шалгаарай.');
+    }
+    final receivable = summary.extraOutflowBreakdown['Төлөгдөөгүй зээл'] ?? 0;
+    if (receivable > 0) {
+      lines.add(
+          'Бусдад өгсөн зээлийн ${money(receivable)} авлага байна. Буцаан авах хугацаагаа тохирч, орж ирэх хүртэл зарцуулах мөнгөндөө бүү тооцоорой.');
     }
 
     return lines;
