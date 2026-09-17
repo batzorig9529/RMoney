@@ -11,12 +11,14 @@ class DashboardPage extends StatelessWidget {
       required this.records,
       required this.savingsPlan,
       this.onAdd,
-      this.onAdvice});
+      this.onAdvice,
+      this.onPrivacyOptions});
 
   final List<MoneyRecord> records;
   final SavingsPlan savingsPlan;
   final VoidCallback? onAdd;
   final VoidCallback? onAdvice;
+  final VoidCallback? onPrivacyOptions;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +56,13 @@ class DashboardPage extends StatelessWidget {
     return PageShell(
       title: 'RMoney',
       subtitle: '${FinanceCalculator.periodLabel(period)} санхүүгийн тойм',
+      trailing: onPrivacyOptions == null
+          ? null
+          : IconButton(
+              onPressed: onPrivacyOptions,
+              tooltip: 'Нууцлалын тохиргоо',
+              icon: const Icon(Icons.privacy_tip_outlined),
+            ),
       children: [
         const SizedBox(height: 8),
         Text('Өнөөдрийн боломж',

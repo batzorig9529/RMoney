@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../services/ad_service.dart';
 import '../services/rmoney_store.dart';
 import 'add_record_page.dart';
 import 'ai_advice_page.dart';
@@ -27,7 +28,19 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    AdService.instance.privacyOptionsRequiredNotifier.addListener(_refreshAds);
     _load();
+  }
+
+  @override
+  void dispose() {
+    AdService.instance.privacyOptionsRequiredNotifier
+        .removeListener(_refreshAds);
+    super.dispose();
+  }
+
+  void _refreshAds() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
@@ -51,6 +64,7 @@ class _HomePageState extends State<HomePage> {
         const SnackBar(content: Text('Хадгаламжийн зорилт хадгаллаа')),
       );
     }
+    AdService.instance.maybeShow();
   }
 
   Future<void> _add(MoneyRecord record) async {
@@ -62,6 +76,7 @@ class _HomePageState extends State<HomePage> {
         const SnackBar(content: Text('Хадгаллаа')),
       );
     }
+    AdService.instance.maybeShow();
   }
 
   Future<void> _addExpenseCategory(String category) async {
@@ -104,7 +119,10 @@ class _HomePageState extends State<HomePage> {
           records: records,
           savingsPlan: savingsPlan,
           onAdd: () => setState(() => tab = 1),
-          onAdvice: _openAiAdvice),
+          onAdvice: _openAiAdvice,
+          onPrivacyOptions: AdService.instance.privacyOptionsRequired
+              ? AdService.instance.showPrivacyOptions
+              : null),
       AddRecordPage(
         records: records,
         expenseCategories: expenseCategories,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -24,8 +26,14 @@ void callbackDispatcher() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize();
-  await NotificationService.requestPermission();
-  await AdService.instance.initialize();
+  runApp(const RMoneyApp());
+
+  unawaited(NotificationService.requestPermission());
+  unawaited(AdService.instance.initialize());
+  unawaited(_initializeBackgroundWork());
+}
+
+Future<void> _initializeBackgroundWork() async {
   await Workmanager().initialize(callbackDispatcher);
   await Workmanager().registerPeriodicTask(
     reminderTask,
@@ -34,5 +42,4 @@ Future<void> main() async {
     initialDelay: const Duration(minutes: 15),
     constraints: Constraints(networkType: NetworkType.notRequired),
   );
-  runApp(const RMoneyApp());
 }

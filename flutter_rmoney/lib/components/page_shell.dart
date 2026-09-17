@@ -5,10 +5,12 @@ class PageShell extends StatelessWidget {
       {super.key,
       required this.title,
       required this.subtitle,
+      this.trailing,
       required this.children});
 
   final String title;
   final String subtitle;
+  final Widget? trailing;
   final List<Widget> children;
 
   @override
@@ -63,6 +65,10 @@ class PageShell extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ],
           ],
         ),
         const SizedBox(height: 16),
